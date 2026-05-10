@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "shopap",
+    "name": "SHOPAP",
     "slug": "shopap",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,17 +13,47 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shopap.app",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
+      "package": "com.shopap.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "android.intent.action.SEND",
+          "data": [{ "mimeType": "text/plain" }],
+          "category": "android.intent.category.DEFAULT"
+        },
+        {
+          "action": "android.intent.action.SEND",
+          "data": [{ "mimeType": "image/*" }],
+          "category": "android.intent.category.DEFAULT"
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.0"
+          }
+        }
+      ]
+    ],
+    "scheme": "shopap"
   }
 }
