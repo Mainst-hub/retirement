@@ -1,21 +1,32 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Linking, AppState } from 'react-native';
+import { Linking, TouchableOpacity } from 'react-native';
 import ShareMenu from 'react-native-share-menu';
 
 import HomeScreen from './src/screens/HomeScreen';
 import CategoriesScreen from './src/screens/CategoriesScreen';
 import SalesScreen from './src/screens/SalesScreen';
+import BoughtScreen from './src/screens/BoughtScreen';
 import AddItemScreen from './src/screens/AddItemScreen';
+import EditItemScreen from './src/screens/EditItemScreen';
 import ItemDetailScreen from './src/screens/ItemDetailScreen';
 import QuickSaveScreen from './src/screens/QuickSaveScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import { getSettings } from './src/storage/items';
+import { requestNotificationPermission } from './src/utils/notifications';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+const PURPLE = '#6200ee';
+const HEADER = { backgroundColor: PURPLE };
+const HEADER_TINT = '#fff';
+const HEADER_TITLE = { fontWeight: 'bold', fontSize: 20 };
 
 function HomeTabs() {
   return (
@@ -23,23 +34,52 @@ function HomeTabs() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           const icons = {
-            Home: focused ? 'bag' : 'bag-outline',
-            Categories: focused ? 'grid' : 'grid-outline',
-            Sales: focused ? 'pricetag' : 'pricetag-outline',
+            'My List': focused ? 'bag' : 'bag-outline',
+            'Browse': focused ? 'grid' : 'grid-outline',
+            'Sales': focused ? 'pricetag' : 'pricetag-outline',
+            'Bought': focused ? 'bag-check' : 'bag-check-outline',
           };
           return <Ionicons name={icons[route.name]} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#6200ee',
+        tabBarActiveTintColor: PURPLE,
         tabBarInactiveTintColor: '#aaa',
-        tabBarStyle: { paddingBottom: 4, height: 58 },
-        headerStyle: { backgroundColor: '#6200ee' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold', fontSize: 20 },
+        tabBarStyle: { paddingBottom: 4, height: 60 },
+        tabBarLabelStyle: { fontSize: 12 },
+        headerStyle: HEADER,
+        headerTintColor: HEADER_TINT,
+        headerTitleStyle: HEADER_TITLE,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'SHOPAP' }} />
-      <Tab.Screen name="Categories" component={CategoriesScreen} />
-      <Tab.Screen name="Sales" component={SalesScreen} />
+      <Tab.Screen
+        name="My List"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          title: 'SHOPAP',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings')}
+              style={{ marginRight: 16 }}
+            >
+              <Ionicons name="settings-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Tab.Screen
+        name="Browse"
+        component={CategoriesScreen}
+        options={{ title: 'Browse' }}
+      />
+      <Tab.Screen
+        name="Sales"
+        component={SalesScreen}
+        options={{ title: 'On Sale' }}
+      />
+      <Tab.Screen
+        name="Bought"
+        component={BoughtScreen}
+        options={{ title: 'I Bought It' }}
+      />
     </Tab.Navigator>
   );
 }
@@ -57,6 +97,12 @@ function detectSource(url) {
 
 export default function App() {
   const navigationRef = useRef(null);
+  const [onboardingDone, setOnboardingDone] = useState(null);
+
+  useEffect(() => {
+    getSettings().then(s => setOnboardingDone(!!s.onboardingDone));
+    requestNotificationPermission();
+  }, []);
 
   const handleShare = (item) => {
     if (!item) return;
@@ -77,14 +123,15 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  // Handle deep links (shopap://save?url=...)
   useEffect(() => {
     const handleDeepLink = ({ url }) => {
       if (!url) return;
       const match = url.match(/[?&]url=([^&]+)/);
       if (match) {
         const productUrl = decodeURIComponent(match[1]);
-        navigationRef.current?.navigate('QuickSave', { url: productUrl, source: detectSource(productUrl) });
+        navigationRef.current?.navigate('QuickSave', {
+          url: productUrl, source: detectSource(productUrl),
+        });
       }
     };
     const sub = Linking.addEventListener('url', handleDeepLink);
@@ -92,40 +139,36 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
+  if (onboardingDone === null) return null; // loading
+
+  if (!onboardingDone) {
+    return <OnboardingScreen onDone={() => setOnboardingDone(true)} />;
+  }
+
   return (
     <NavigationContainer ref={navigationRef}>
       <StatusBar style="light" />
       <Stack.Navigator>
         <Stack.Screen name="Main" component={HomeTabs} options={{ headerShown: false }} />
         <Stack.Screen
-          name="QuickSave"
-          component={QuickSaveScreen}
-          options={{
-            title: 'Save Item',
-            headerStyle: { backgroundColor: '#6200ee' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontWeight: 'bold' },
-          }}
+          name="QuickSave" component={QuickSaveScreen}
+          options={{ title: 'Save This Item', headerStyle: HEADER, headerTintColor: HEADER_TINT, headerTitleStyle: HEADER_TITLE }}
         />
         <Stack.Screen
-          name="AddItem"
-          component={AddItemScreen}
-          options={{
-            title: 'Save an Item',
-            headerStyle: { backgroundColor: '#6200ee' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontWeight: 'bold' },
-          }}
+          name="AddItem" component={AddItemScreen}
+          options={{ title: 'Save Something New', headerStyle: HEADER, headerTintColor: HEADER_TINT, headerTitleStyle: HEADER_TITLE }}
         />
         <Stack.Screen
-          name="ItemDetail"
-          component={ItemDetailScreen}
-          options={{
-            title: 'Item Details',
-            headerStyle: { backgroundColor: '#6200ee' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontWeight: 'bold' },
-          }}
+          name="ItemDetail" component={ItemDetailScreen}
+          options={{ title: 'Item Details', headerStyle: HEADER, headerTintColor: HEADER_TINT, headerTitleStyle: HEADER_TITLE }}
+        />
+        <Stack.Screen
+          name="EditItem" component={EditItemScreen}
+          options={{ title: 'Edit This Item', headerStyle: HEADER, headerTintColor: HEADER_TINT, headerTitleStyle: HEADER_TITLE }}
+        />
+        <Stack.Screen
+          name="Settings" component={SettingsScreen}
+          options={{ title: 'Settings', headerStyle: HEADER, headerTintColor: HEADER_TINT, headerTitleStyle: HEADER_TITLE }}
         />
       </Stack.Navigator>
     </NavigationContainer>
