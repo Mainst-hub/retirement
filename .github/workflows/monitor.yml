@@ -1,0 +1,58 @@
+name: Delta Upgrade Price Monitor
+
+on:
+  schedule:
+    - cron: '0 13 * * *'
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
+      - name: Restore price state cache
+        uses: actions/cache@v4
+        with:
+          path: price_state.json
+          key: delta-price-state
+          restore-keys: delta-price-state
+
+      - name: Run price monitor
+        env:
+          DELTA_LAST_NAME: ${{ secrets.DELTA_LAST_NAME }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python delta_monitor.py
+
+      - name: Save price state cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: price_state.json
+          key: delta-price-state-${{ github.run_id }}
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_id }}
+          path: logs/
+          retention-days: 7
+          if-no-files-found: ignore
+          
