@@ -5,7 +5,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Linking, TouchableOpacity } from 'react-native';
-import ShareMenu from 'react-native-share-menu';
+
+// ShareMenu only works in a real installed build, not in Expo Go preview
+let ShareMenu = null;
+try { ShareMenu = require('react-native-share-menu').default; } catch (_) {}
 
 import HomeScreen from './src/screens/HomeScreen';
 import CategoriesScreen from './src/screens/CategoriesScreen';
@@ -118,6 +121,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!ShareMenu) return;
     ShareMenu.getInitialShare(handleShare);
     const subscription = ShareMenu.addNewShareListener(handleShare);
     return () => subscription.remove();
