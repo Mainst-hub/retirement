@@ -7,8 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Linking, TouchableOpacity } from 'react-native';
 
 // ShareMenu only works in a real installed build, not in Expo Go preview
-let ShareMenu = null;
-try { ShareMenu = require('react-native-share-menu').default; } catch (_) {}
+const ShareMenu = null;
 
 import HomeScreen from './src/screens/HomeScreen';
 import CategoriesScreen from './src/screens/CategoriesScreen';
